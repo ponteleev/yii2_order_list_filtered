@@ -56,6 +56,11 @@ $config = [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
+                // Важно: Сначала пишем более специфичное правило со статусом
+                'orders/<statusSlug:(pending|in-progress|completed|canceled|error)>' => 'orders/order/index',
+
+                // Правило для главной страницы модуля (Все заказы)
+                'orders' => 'orders/order/index',
             ],
         ],
     ],

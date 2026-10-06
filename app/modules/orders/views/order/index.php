@@ -11,19 +11,10 @@ use yii\db\Query;
 /* @var $this yii\web\View */
 /* @var $searchModel app\modules\orders\models\OrderSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
+/* @var $statusSlug */
 
 $this->title = 'Orders';
 
-// Вспомогательная функция для генерации ссылок фильтров
-$filterUrl = function($paramName, $value) use ($searchModel) {
-    $params = Yii::$app->request->get();
-    if ($value === null) {
-        unset($params[$paramName]);
-    } else {
-        $params[$paramName] = $value;
-    }
-    return Url::to(array_merge(['/orders/order/index'], $params));
-};
 
 // Карта статусов
 $statuses = [
@@ -32,6 +23,58 @@ $statuses = [
     '2' => 'Completed',
     '3' => 'Canceled',
     '4' => 'Error'
+];
+
+
+// Переворачиваем карту, чтобы находить слаг по ID статуса (нужно для фильтрации сервисов)
+$idToSlugMap = array_flip(Order::getStatusSlugMap());
+
+/**
+ * Универсальный генератор ЧПУ-ссылок для фильтров и табов
+ *
+ * @param string $paramName Имя изменяемого параметра ('statusSlug', 'service_id', 'mode')
+ * @param mixed $value Новое значение параметра (null для сброса фильтра)
+ * @return string Валидный URL
+ */
+$filterUrl = function(string $paramName, mixed $value) use ($statusSlug) {
+    $getParams = Yii::$app->request->get();
+
+    // Очищаем системный мусор и старые переменные
+    unset($getParams['page'], $getParams['status'], $getParams['statusSlug']);
+
+    // Базовый полный маршрут модуля
+    $route = ['/orders/order/index'];
+
+    // Вычисляем активный слаг статуса для этой ссылки
+    if ($paramName === 'statusSlug') {
+        $activeSlug = $value;
+    } else {
+        $activeSlug = $statusSlug;
+
+        // Модифицируем GET-параметры для выпадающих списков (Service/Mode)
+        if ($value === null) {
+            unset($getParams[$paramName]);
+        } else {
+            $getParams[$paramName] = $value;
+        }
+    }
+
+    // Если это вкладка "All orders" (null), параметр statusSlug вообще не должен генерироваться.
+    if ($activeSlug !== null && $activeSlug !== '') {
+        $route['statusSlug'] = $activeSlug;
+    }
+
+    return Url::to(array_merge($route, $getParams));
+};
+
+// Список табов для рендеринга
+$tabItems = [
+    null          => 'All orders',
+    'pending'     => 'Pending',
+    'in-progress' => 'In progress',
+    'completed'   => 'Completed',
+    'canceled'    => 'Canceled',
+    'error'       => 'Error',
 ];
 
 // Выбираем только те сервисы, по которым есть хотя бы один заказ.
@@ -82,45 +125,33 @@ if (!empty($activeServiceIds)) {
 
     <!-- Табы статусов -->
     <ul class="nav nav-tabs p-b">
-        <li class="<?= $searchModel->status === null ? 'active' : '' ?>">
-            <a href="<?= $filterUrl('status', null) ?>">All orders</a>
-        </li>
-        <?php foreach ($statuses as $key => $label): ?>
-            <li class="<?= (string)$searchModel->status === (string)$key ? 'active' : '' ?>">
-                <a href="<?= $filterUrl('status', $key) ?>"><?= $label ?></a>
+        <?php foreach ($tabItems as $slug => $label): ?>
+            <li class="<?= $statusSlug === $slug ? 'active' : '' ?>">
+                <a href="<?= $filterUrl('statusSlug', $slug) ?>"><?= $label ?></a>
             </li>
         <?php endforeach; ?>
 
         <!-- Форма поиска -->
         <li class="pull-right custom-search">
-            <form class="form-inline" action="/orders/order/index" method="get">
+            <!-- ИСПРАВЛЕНО: экшен формы теперь ведет на текущий ЧПУ-адрес, сохраняя статус -->
+            <form class="form-inline" action="<?= Url::to($statusSlug === null ? ['/orders/order/index'] : ['/orders/order/index', 'statusSlug' => $statusSlug]) ?>" method="get">
 
-                <!-- Скрытые поля переносим СЮДА (в начало формы), чтобы они не ломали сетку .input-group -->
-                <?php if (Yii::$app->request->get('status') !== null): ?>
-                    <input type="hidden" name="status" value="<?= Html::encode(Yii::$app->request->get('status')) ?>">
-                <?php endif; ?>
-                <?php if (Yii::$app->request->get('mode') !== null): ?>
-                    <input type="hidden" name="mode" value="<?= Html::encode(Yii::$app->request->get('mode')) ?>">
-                <?php endif; ?>
-                <?php if (Yii::$app->request->get('service_id') !== null): ?>
-                    <input type="hidden" name="service_id" value="<?= Html::encode(Yii::$app->request->get('service_id')) ?>">
-                <?php endif; ?>
+                <!-- Скрытые поля для фильтров режима и сервиса -->
+                <?= Yii::$app->request->get('mode') !== null ? Html::hiddenInput('mode', Yii::$app->request->get('mode')) : '' ?>
+                <?= Yii::$app->request->get('service_id') !== null ? Html::hiddenInput('service_id', Yii::$app->request->get('service_id')) : '' ?>
 
                 <div class="input-group">
                     <input type="text" name="search" class="form-control" value="<?= Html::encode(Yii::$app->request->get('search')) ?>" placeholder="Search orders">
-
-                    <!-- Правая часть: строго один тег span с оригинальными классами верстки -->
                     <span class="input-group-btn search-select-wrap">
-        <select class="form-control search-select" name="search-type">
-          <option value="1" <?= Yii::$app->request->get('search-type') == '1' ? 'selected' : '' ?>>Order ID</option>
-          <option value="2" <?= Yii::$app->request->get('search-type') == '2' ? 'selected' : '' ?>>Link</option>
-          <option value="3" <?= Yii::$app->request->get('search-type') == '3' ? 'selected' : '' ?>>Username</option>
-        </select>
-        <button type="submit" class="btn btn-default">
-          <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
-        </button>
-      </span>
-
+            <select class="form-control search-select" name="search-type">
+              <option value="1" <?= Yii::$app->request->get('search-type') == '1' ? 'selected' : '' ?>>Order ID</option>
+              <option value="2" <?= Yii::$app->request->get('search-type') == '2' ? 'selected' : '' ?>>Link</option>
+              <option value="3" <?= Yii::$app->request->get('search-type') == '3' ? 'selected' : '' ?>>Username</option>
+            </select>
+            <button type="submit" class="btn btn-default">
+                <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+            </button>
+          </span>
                 </div>
             </form>
         </li>

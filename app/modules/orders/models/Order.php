@@ -84,4 +84,20 @@ class Order extends \yii\db\ActiveRecord
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
+    /**
+     * Карта соответствия слагов URL и цифровых статусов БД
+     * В более сложной конфигурации лучше абстрагироваться на уровне выделенной структуры Enum для статусов заказов
+     */
+    public static function getStatusSlugMap()
+    {
+        return [
+            'pending'     => 0,
+            'in-progress' => 1,
+            'completed'   => 2,
+            'canceled'    => 3,
+            'error'       => 4,
+        ];
+    }
+
+
 }
