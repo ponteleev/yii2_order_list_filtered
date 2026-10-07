@@ -17,6 +17,7 @@ $config = [
             ],
         ],
     ],
+    'language' => $_ENV['APP_LANGUAGE'] ?? 'en-US',
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
@@ -28,8 +29,7 @@ $config = [
     ],
     'components' => [
         'request' => [
-            // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
-            'cookieValidationKey' => 'KcWq_8Q8WIwxHGU44ltKqZvPFvREx4FC',
+            'cookieValidationKey' => $_ENV['COOKIE_VALIDATION_KEY'],
         ],
         'cache' => [
             'class' => \yii\caching\FileCache::class,
@@ -67,7 +67,7 @@ $config = [
     'params' => $params,
 ];
 
-if (YII_ENV_DEV) {
+if (isset($_ENV['APP_DEBUG']) && $_ENV['APP_DEBUG'] === 'true') {
     // configuration adjustments for 'dev' environment
     $config['bootstrap'][] = 'debug';
     $config['modules']['debug'] = [
