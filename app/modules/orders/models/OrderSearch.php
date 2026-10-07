@@ -7,11 +7,11 @@ use yii\db\Query;
 
 class OrderSearch extends Order
 {
-    public $search;       // Строка поиска
-    public $searchType;   // Тип поиска (1 - ID, 2 - Link, 3 - Username)
-    public $foundUserIds = []; // массив пользователей при поисках по ним для дедубликации запросов
+    public string $search;       // Строка поиска
+    public int $searchType;   // Тип поиска (1 - ID, 2 - Link, 3 - Username)
+    public array $foundUserIds = []; // массив пользователей при поисках по ним для дедубликации запросов
 
-    public function rules()
+    public function rules(): array
     {
         return [
             [['id', 'user_id', 'quantity', 'service_id', 'status', 'mode', 'created_at'], 'integer'],
@@ -25,7 +25,7 @@ class OrderSearch extends Order
      * @param array $params Входящие GET-параметры запроса
      * @return ActiveDataProvider
      */
-    public function search($params)
+    public function search(array $params): ActiveDataProvider
     {
         // 1. Загружаем входящие параметры из URL
         $this->load($params, '');

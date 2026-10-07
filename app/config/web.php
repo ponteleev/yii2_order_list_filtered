@@ -63,6 +63,18 @@ $config = [
                 'orders' => 'orders/order/index',
             ],
         ],
+        'i18n' => [
+            'translations' => [
+                'modules/orders' => [
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'sourceLanguage' => 'en-US', // Дефолтный язык в коде (английский)
+                    'basePath' => '@app/modules/orders/messages', // Сюда мы позже положим переводы
+                    'fileMap' => [
+                        'modules/orders' => 'orders.php',
+                    ],
+                ],
+            ],
+        ],
     ],
     'params' => $params,
 ];

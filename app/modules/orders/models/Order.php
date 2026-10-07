@@ -1,99 +1,85 @@
 <?php
 
+declare(strict_types=1);
+
 namespace app\modules\orders\models;
 
+use app\models\Users;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
+use app\models\User;
 use app\models\Service;
-use app\models\Users as User; // keep User model untouched , use Users new one
 
 /**
- * This is the model class for table "orders".
+ * Класс модели для таблицы "{{%orders}}".
  *
- * @property int $id
- * @property int $user_id
- * @property string $link
- * @property int $quantity
- * @property int $service_id
- * @property int $status 0 - Pending, 1 - In progress, 2 - Completed, 3 - Canceled, 4 - Fail
- * @property int $created_at
- * @property int $mode 0 - Manual, 1 - Auto
+ * @property int $id Идентификатор заказа
+ * @property int $user_id Идентификатор пользователя
+ * @property string $link Ссылка на объект заказа
+ * @property int $quantity Количество
+ * @property int $service_id Идентификатор услуги
+ * @property int $status Статус заказа (0-Pending, 1-In progress, 2-Completed, 3-Canceled, 4-Error)
+ * @property int $created_at Время создания (timestamp)
+ * @property int $mode Режим выполнения (0-Manual, 1-Auto)
  *
- * @property Service $service
- * @property User $user
+ * @property User|null $user Связанная модель пользователя
+ * @property Service|null $service Связанная модель услуги
  */
-class Order extends \yii\db\ActiveRecord
+class Order extends ActiveRecord
 {
-
-
     /**
-     * {@inheritdoc}
+     * Возвращает имя таблицы в базе данных.
+     *
+     * @return string Имя таблицы
      */
-    public static function tableName()
+    public static function tableName(): string
     {
-        return 'orders';
+        return '{{%orders}}';
     }
 
     /**
-     * {@inheritdoc}
+     * Правила валидации полей модели.
+     *
+     * @return array Массив правил валидации
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             [['user_id', 'link', 'quantity', 'service_id', 'status', 'created_at', 'mode'], 'required'],
             [['user_id', 'quantity', 'service_id', 'status', 'created_at', 'mode'], 'integer'],
             [['link'], 'string', 'max' => 300],
+            // Защита целостности данных: проверка существования внешних ключей в СУБД
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
             [['service_id'], 'exist', 'skipOnError' => true, 'targetClass' => Service::class, 'targetAttribute' => ['service_id' => 'id']],
         ];
     }
 
     /**
-     * {@inheritdoc}
+     * Возвращает локализованные названия атрибутов (меток) полей.
+     *
+     * @return array Массив меток полей в формате [атрибут => название]
      */
-    public function attributeLabels()
+    public function attributeLabels(): array
     {
         return [
-            'id' => Yii::t('app', 'ID'),
-            'user_id' => Yii::t('app', 'User ID'),
-            'link' => Yii::t('app', 'Link'),
-            'quantity' => Yii::t('app', 'Quantity'),
-            'service_id' => Yii::t('app', 'Service ID'),
-            'status' => Yii::t('app', '0 - Pending, 1 - In progress, 2 - Completed, 3 - Canceled, 4 - Fail'),
-            'created_at' => Yii::t('app', 'Created At'),
-            'mode' => Yii::t('app', '0 - Manual, 1 - Auto'),
+            'id'         => Yii::t('modules/orders', 'ID'),
+            'user_id'    => Yii::t('modules/orders', 'User ID'),
+            'link'       => Yii::t('modules/orders', 'Link'),
+            'quantity'   => Yii::t('modules/orders', 'Quantity'),
+            'service_id' => Yii::t('modules/orders', 'Service ID'),
+            'status'     => Yii::t('modules/orders', 'Status'),
+            'created_at' => Yii::t('modules/orders', 'Created At'),
+            'mode'       => Yii::t('modules/orders', 'Mode'),
         ];
     }
 
     /**
-     * Gets query for [[Service]].
+     * Карта соответствия ЧПУ-слагов URL и цифровых статусов в базе данных.
      *
-     * @return \yii\db\ActiveQuery
+     * @return array Ассоциативный массив слагов [слаг => статус_id]
      */
-    public function getService()
-    {
-        return $this->hasOne(Service::class, ['id' => 'service_id']);
-    }
-
-    /**
-     * Gets query for [[User]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getUser()
-    {
-        return $this->hasOne(User::class, ['id' => 'user_id']);
-    }
-
-    public static function find()
-    {
-        return new OrderQuery(get_called_class());
-    }
-
-    /**
-     * Карта соответствия слагов URL и цифровых статусов БД
-     * В более сложной конфигурации лучше абстрагироваться на уровне выделенной структуры Enum для статусов заказов
-     */
-    public static function getStatusSlugMap()
+    public static function getStatusSlugMap(): array
     {
         return [
             'pending'     => 0,
@@ -104,5 +90,34 @@ class Order extends \yii\db\ActiveRecord
         ];
     }
 
+    /**
+     * Связь с моделью глобальных пользователей (Users).
+     *
+     * @return ActiveQuery
+     */
+    public function getUser(): ActiveQuery
+    {
+        return $this->hasOne(Users::class, ['id' => 'user_id']);
+    }
 
+    /**
+     * Связь с моделью глобальных услуг (Services).
+     *
+     * @return ActiveQuery
+     */
+    public function getService(): ActiveQuery
+    {
+        return $this->hasOne(Service::class, ['id' => 'service_id']);
+    }
+
+    /**
+     * Переопределяет стандартный фабричный метод создания запросов.
+     * Подключает кастомный слой ActiveQuery фильтрации для Highload-задач.
+     *
+     * @return OrderQuery Мощный кастомный класс запросов модуля
+     */
+    public static function find(): OrderQuery
+    {
+        return new OrderQuery(static::class);
+    }
 }
