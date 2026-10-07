@@ -1,12 +1,10 @@
 <?php
 
-use app\modules\orders\assets\OrdersAsset;
 use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\widgets\LinkPager;
 use app\modules\orders\models\Order;
 use app\models\Service;
-use yii\db\Query;
 
 /* @var $this yii\web\View */
 /* @var $searchModel app\modules\orders\models\OrderSearch */
@@ -45,7 +43,8 @@ $filterUrl = function(string $paramName, mixed $value) use ($statusSlug) {
 
     if ($paramName === 'statusSlug') {
         $activeSlug = $value;
-        unset($getParams['mode'], $getParams['service_id']); // Сброс по ТЗ
+        // ТЗ: при смене таба статуса фильтры сбрасываются ВСЕГДА
+        unset($getParams['mode'], $getParams['service_id']);
     } else {
         $activeSlug = $statusSlug;
         if ($value === null) {
@@ -91,8 +90,6 @@ usort($dropdownServices, function($a, $b) {
     return $b['count'] <=> $a['count'];
 });
 
-$statusesMap = [0 => 'Pending', 1 => 'In progress', 2 => 'Completed', 3 => 'Canceled', 4 => 'Error'];
-
 // Список табов для рендеринга
 $tabItems = [
     null          => 'All orders',
@@ -103,28 +100,6 @@ $tabItems = [
     'error'       => 'Error',
 ];
 
-// Выбираем только те сервисы, по которым есть хотя бы один заказ.
-// Используем asArray(), чтобы получить чистый массив строк вместо объектов.
-// если в этом списке нужно отобразить ТОЛЬКО сервисы по отфильтрованным в других фильтрах заказам - расширим!
-// 1. Получаем только уникальные ID сервисов, которые реально есть в заказах.
-// Этот запрос отработает мгновенно по покрывающему индексу idx-orders-service_id (Using index)
-$activeServiceIds = (new Query())
-    ->select(['service_id'])
-    ->from('{{%orders}}')
-    ->distinct()
-    ->column(); // Возвращает плоский массив [213, 214, 215...]
-
-$activeServices = [];
-
-// 2. Если заказы вообще есть, забираем имена только для этих ID
-if (!empty($activeServiceIds)) {
-    $activeServices = (new Query())
-        ->select(['id', 'name'])
-        ->from('{{%services}}')
-        ->where(['id' => $activeServiceIds])
-        ->orderBy(['name' => SORT_ASC])
-        ->all();
-}
 ?>
 <style>
     .label-default {
@@ -163,10 +138,10 @@ if (!empty($activeServiceIds)) {
                 <div class="input-group">
                     <input type="text" name="search" class="form-control" value="<?= Html::encode(Yii::$app->request->get('search')) ?>" placeholder="Search orders">
                     <span class="input-group-btn search-select-wrap">
-        <select class="form-control search-select" name="search-type">
-          <option value="1" <?= Yii::$app->request->get('search-type') == '1' ? 'selected' : '' ?>>Order ID</option>
-          <option value="2" <?= Yii::$app->request->get('search-type') == '2' ? 'selected' : '' ?>>Link</option>
-          <option value="3" <?= Yii::$app->request->get('search-type') == '3' ? 'selected' : '' ?>>Username</option>
+        <select class="form-control search-select" name="searchType">
+          <option value="1" <?= Yii::$app->request->get('searchType') == '1' ? 'selected' : '' ?>>Order ID</option>
+          <option value="2" <?= Yii::$app->request->get('searchType') == '2' ? 'selected' : '' ?>>Link</option>
+          <option value="3" <?= Yii::$app->request->get('searchType') == '3' ? 'selected' : '' ?>>Username</option>
         </select>
         <button type="submit" class="btn btn-default">
           <span class="glyphicon glyphicon-search" aria-hidden="true"></span>

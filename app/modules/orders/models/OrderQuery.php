@@ -50,14 +50,17 @@ class OrderQuery extends ActiveQuery
                 case '2':
                     $this->andWhere(['like', 'orders.link', $searchModel->search]);
                     break;
-                case '3':
-                    $this->joinWith(['user']);
-                    $this->andWhere([
-                        'or',
-                        ['like', 'users.first_name', $searchModel->search],
-                        ['like', 'users.last_name', $searchModel->search]
-                    ]);
+                case '3': // Поиск по Username
+                    // Берем уже готовые ID, которые OrderSearch нашел за один раз
+                    if (!empty($searchModel->foundUserIds)) {
+                        $this->andWhere(['orders.user_id' => $searchModel->foundUserIds]);
+                    } else {
+                        // Если при поиске по буквам никто не нашелся или поиск пуст,
+                        // сразу режем запрос, чтобы orders не сканировался зря
+                        $this->andWhere(['orders.user_id' => 0]);
+                    }
                     break;
+
             }
         }
 

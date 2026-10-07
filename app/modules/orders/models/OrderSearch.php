@@ -2,14 +2,14 @@
 
 namespace app\modules\orders\models;
 
-use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\modules\orders\models\Order;
+use yii\db\Query;
 
 class OrderSearch extends Order
 {
     public $search;       // Строка поиска
     public $searchType;   // Тип поиска (1 - ID, 2 - Link, 3 - Username)
+    public $foundUserIds = []; // массив пользователей при поисках по ним для дедубликации запросов
 
     public function rules()
     {
@@ -30,10 +30,22 @@ class OrderSearch extends Order
         // 1. Загружаем входящие параметры из URL
         $this->load($params, '');
 
-        // ТЗ: Если была отправлена строка поиска, сбрасываем mode и service_id
-        if (!empty($this->search)) {
+        // ТЗ + UX ТРАКТОВКА: Если отправлена строка поиска, но выпадающие фильтры
+        // отсутствуют в GET-запросе (то есть это первое нажатие кнопки поиска) — сбрасываем их.
+        // Если они есть в URL, значит, пользователь сужает текущий поиск, и мы их сохраняем!
+        if (!empty($this->search) && !isset($params['mode']) && !isset($params['service_id'])) {
             $this->mode = null;
             $this->service_id = null;
+        }
+
+        // дедубликация перед вызовом OrderQuery->filterBySearchModel
+        if (!empty($this->search) && $this->searchType == '3') {
+            $this->foundUserIds = (new Query())
+                ->select(['id'])
+                ->from('{{%users}}')
+                ->where(['like', 'first_name', $this->search])
+                ->orWhere(['like', 'last_name', $this->search])
+                ->column();
         }
 
         // 2. Инициализируем оптимизированные запросы (Count отдельно, Data отдельно)
