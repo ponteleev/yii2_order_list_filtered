@@ -1,5 +1,7 @@
 <?php
 
+namespace migrations;
+
 use yii\db\Migration;
 
 class m261006_141859_add_idx_orders_status_service_id_to_orders extends Migration

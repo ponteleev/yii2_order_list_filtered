@@ -1,5 +1,7 @@
 <?php
 
+namespace migrations;
+
 use yii\db\Migration;
 
 class m261006_105340_add_foreign_keys_to_orders_table extends Migration

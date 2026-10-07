@@ -1,5 +1,7 @@
 <?php
 
+namespace migrations;
+
 use yii\db\Migration;
 
 class m261007_084533_add_user_search_index_to_orders extends Migration

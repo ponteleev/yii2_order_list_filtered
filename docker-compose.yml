@@ -24,6 +24,8 @@ services:
     env_file: .env
     volumes:
       - ./app:/app
+      # Пробрасываем папку миграций из корня репозитория в корень окружения контейнера
+      - ./migrations:/migrations
     depends_on:
       - db
 

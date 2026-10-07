@@ -1,5 +1,7 @@
 <?php
 
+namespace migrations;
+
 use yii\db\Migration;
 
 class m261007_115029_add_link_search_index_to_orders extends Migration

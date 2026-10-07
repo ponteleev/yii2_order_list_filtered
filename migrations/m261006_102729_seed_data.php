@@ -1,5 +1,7 @@
 <?php
 
+namespace migrations;
+
 use yii\db\Migration;
 
 class m261006_102729_seed_data extends Migration

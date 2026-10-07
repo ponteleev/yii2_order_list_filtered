@@ -8,10 +8,23 @@ $config = [
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log'],
     'controllerNamespace' => 'app\commands',
+    // Указываем новый путь к папке миграций в корне Docker-окружения
+    'controllerMap' => [
+        'migrate' => [
+            'class' => 'yii\console\controllers\MigrateController',
+            // Отключаем стандартный путь поиска файлов, чтобы задействовать неймспейсы
+            'migrationPath' => null,
+            // Регистрируем новое пространство имен
+            'migrationNamespaces' => [
+                'migrations',
+            ],
+        ],
+    ],
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
         '@tests' => '@app/tests',
+        '@migrations' => '/migrations', // Связываем алиас с коренной папкой Docker
     ],
     'components' => [
         'cache' => [

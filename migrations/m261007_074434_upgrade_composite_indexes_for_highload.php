@@ -1,5 +1,7 @@
 <?php
 
+namespace migrations;
+
 use yii\db\Migration;
 
 class m261007_074434_upgrade_composite_indexes_for_highload extends Migration
