@@ -7,8 +7,8 @@ use yii\db\Query;
 
 class OrderSearch extends Order
 {
-    public string $search;       // Строка поиска
-    public int $searchType;   // Тип поиска (1 - ID, 2 - Link, 3 - Username)
+    public ?string $search = null;       // Строка поиска
+    public ?string $searchType = null;   // Тип поиска (1 - ID, 2 - Link, 3 - Username)
     public array $foundUserIds = []; // массив пользователей при поисках по ним для дедубликации запросов
 
     public function rules(): array

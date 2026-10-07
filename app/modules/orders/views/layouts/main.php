@@ -4,31 +4,65 @@
 
 use yii\helpers\Html;
 use app\modules\orders\assets\OrdersAsset;
+use yii\helpers\Url;
 
+/**
+ * Главный шаблон (layout) модуля управления заказами.
+ * Обеспечивает сквозную глобальную навигацию по ТЗ и мультиязычность.
+ *
+ * @var \yii\web\View $this
+ * @var string $content Содержимое дочернего представления (вьюхи index.php)
+ */
+
+// Регистрация мета-тегов и CSRF для защиты от подделки межсайтовых запросов
+$this->registerCsrfMetaTags();
 // Регистрируем ассет модуля
 OrdersAsset::register($this);
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>
-<html lang="<?= Yii::$app->language ?>">
+<html lang="<?= Html::encode(Yii::$app->language) ?>">
 <head>
-    <meta charset="<?= Yii::$app->charset ?>">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="<?= Html::encode(Yii::$app->charset) ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <?= Html::csrfMetaTags() ?>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title><?= Html::encode($this->title) ?></title>
-    <!--[if lt IE 9]>
-    <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
-    <?php $this->head() ?> <!-- Маркер для вставки CSS ассета -->
+    <?php $this->head() ?>
 </head>
 <body>
-<?php $this->beginBody() ?> <!-- Маркер начала тела страницы -->
+<?php $this->beginBody() ?>
 
-<?= $content ?> <!-- Сюда Yii автоматически подставит код из index.php -->
+<!-- Глобальная верхняя панель навигации  -->
+<nav class="navbar navbar-fixed-top navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+        </div>
 
-<?php $this->endBody() ?> <!-- Маркер для вставки JS ассета перед </body> -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <!-- Ссылки глобального меню с поддержкой i18n локализации -->
+            <ul class="nav navbar-nav">
+                <li class="active">
+                    <a href="<?= Url::to(['/orders/order/index']) ?>">
+                        <?= Yii::t('modules/orders', 'Orders') ?>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Контейнер для динамического вывода контента вьюхи (index.php) -->
+<div class="main-content">
+    <?= $content ?>
+</div>
+
+<?php $this->endBody() ?>
 </body>
 </html>
 <?php $this->endPage() ?>
