@@ -18,6 +18,8 @@ $config = [
         ],
     ],
     'language' => $_ENV['APP_LANGUAGE'] ?? 'en-US',
+    // Автоматически открываем страницу заказов при входе на главную
+    'defaultRoute' => 'orders/order/index',
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
@@ -39,7 +41,8 @@ $config = [
             'enableAutoLogin' => true,
         ],
         'errorHandler' => [
-            'errorAction' => 'site/error',
+            // Перенаправляем обработку ошибок на наш модуль
+            'errorAction' => 'orders/order/index',
         ],
         'mailer' => \yii\mail\MailerInterface::class,
         'log' => [
