@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-namespace app\modules\orders\models;
+namespace app\models\query;
 
+use app\models\Order;
+use app\modules\orders\models\OrderSearch;
 use yii\db\ActiveQuery;
 use yii\db\Expression;
 

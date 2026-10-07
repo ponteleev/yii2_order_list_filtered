@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-use yii\helpers\Url;
-use yii\helpers\Html;
-use yii\web\View;
-use yii\widgets\LinkPager;
+use app\models\Order;
 use app\models\Service;
-use app\modules\orders\models\Order;
 use app\modules\orders\models\OrderSearch;
 use yii\data\ActiveDataProvider;
+use yii\helpers\Html;
+use yii\helpers\Url;
+use yii\web\View;
+use yii\widgets\LinkPager;
 
 /**
  * Файл представления (view) для отображения листинга заказов.

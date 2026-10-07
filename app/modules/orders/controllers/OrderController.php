@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace app\modules\orders\controllers;
 
+use app\models\Order;
+use app\modules\orders\models\OrderSearch;
 use Yii;
 use yii\base\InvalidConfigException;
 use yii\web\Controller;
+use yii\web\NotFoundHttpException;
 use yii\web\RangeNotSatisfiableHttpException;
 use yii\web\Response;
-use yii\web\NotFoundHttpException;
-use app\modules\orders\models\Order;
-use app\modules\orders\models\OrderSearch;
 
 /**
  * OrderController управляет отображением списка заказов и процедурой экспорта.

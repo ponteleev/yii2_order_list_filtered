@@ -2,6 +2,7 @@
 
 namespace app\modules\orders\models;
 
+use app\models\Order;
 use yii\data\ActiveDataProvider;
 use yii\db\Query;
 

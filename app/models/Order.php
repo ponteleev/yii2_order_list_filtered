@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-namespace app\modules\orders\models;
+namespace app\models;
 
-use app\models\Users;
+use app\models\Users as User;
+use app\models\query\OrderQuery;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
-use app\models\User;
-use app\models\Service;
 
 /**
  * Класс модели для таблицы "{{%orders}}".
