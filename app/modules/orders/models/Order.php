@@ -84,6 +84,11 @@ class Order extends \yii\db\ActiveRecord
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
+    public static function find()
+    {
+        return new OrderQuery(get_called_class());
+    }
+
     /**
      * Карта соответствия слагов URL и цифровых статусов БД
      * В более сложной конфигурации лучше абстрагироваться на уровне выделенной структуры Enum для статусов заказов

@@ -31,6 +31,7 @@ $idToSlugMap = array_flip(Order::getStatusSlugMap());
 
 /**
  * Универсальный генератор ЧПУ-ссылок для фильтров и табов
+ * При переключении таба сбрасываем mode и service
  *
  * @param string $paramName Имя изменяемого параметра ('statusSlug', 'service_id', 'mode')
  * @param mixed $value Новое значение параметра (null для сброса фильтра)
@@ -38,20 +39,15 @@ $idToSlugMap = array_flip(Order::getStatusSlugMap());
  */
 $filterUrl = function(string $paramName, mixed $value) use ($statusSlug) {
     $getParams = Yii::$app->request->get();
-
-    // Очищаем системный мусор и старые переменные
     unset($getParams['page'], $getParams['status'], $getParams['statusSlug']);
 
-    // Базовый полный маршрут модуля
     $route = ['/orders/order/index'];
 
-    // Вычисляем активный слаг статуса для этой ссылки
     if ($paramName === 'statusSlug') {
         $activeSlug = $value;
+        unset($getParams['mode'], $getParams['service_id']); // Сброс по ТЗ
     } else {
         $activeSlug = $statusSlug;
-
-        // Модифицируем GET-параметры для выпадающих списков (Service/Mode)
         if ($value === null) {
             unset($getParams[$paramName]);
         } else {
@@ -59,13 +55,43 @@ $filterUrl = function(string $paramName, mixed $value) use ($statusSlug) {
         }
     }
 
-    // Если это вкладка "All orders" (null), параметр statusSlug вообще не должен генерироваться.
     if ($activeSlug !== null && $activeSlug !== '') {
         $route['statusSlug'] = $activeSlug;
     }
 
     return Url::to(array_merge($route, $getParams));
 };
+
+// Получаем сырые каунтеры из custom ActiveQuery метода
+$queryInstance = Order::find();
+$queryInstance->filterBySearchModel($searchModel);
+$stats = $queryInstance->getServicesSummary($searchModel);
+
+$serviceCounts = [];
+foreach ($stats as $row) {
+    $serviceCounts[$row['service_id']] = (int)$row['count'];
+}
+
+// Загружаем имена всех сервисов из справочника
+$servicesData = Service::find()->asArray()->all();
+$dropdownServices = [];
+
+foreach ($servicesData as $s) {
+    $count = $serviceCounts[$s['id']] ?? 0;
+    $dropdownServices[] = [
+        'id' => $s['id'],
+        'name' => $s['name'],
+        'count' => $count,
+        'disabled' => ($count === 0) // Флаг для серого цвета по ТЗ
+    ];
+}
+
+// Сортировка по ТЗ: от большего количества к меньшему
+usort($dropdownServices, function($a, $b) {
+    return $b['count'] <=> $a['count'];
+});
+
+$statusesMap = [0 => 'Pending', 1 => 'In progress', 2 => 'Completed', 3 => 'Canceled', 4 => 'Error'];
 
 // Список табов для рендеринга
 $tabItems = [
@@ -133,25 +159,19 @@ if (!empty($activeServiceIds)) {
 
         <!-- Форма поиска -->
         <li class="pull-right custom-search">
-            <!-- ИСПРАВЛЕНО: экшен формы теперь ведет на текущий ЧПУ-адрес, сохраняя статус -->
             <form class="form-inline" action="<?= Url::to($statusSlug === null ? ['/orders/order/index'] : ['/orders/order/index', 'statusSlug' => $statusSlug]) ?>" method="get">
-
-                <!-- Скрытые поля для фильтров режима и сервиса -->
-                <?= Yii::$app->request->get('mode') !== null ? Html::hiddenInput('mode', Yii::$app->request->get('mode')) : '' ?>
-                <?= Yii::$app->request->get('service_id') !== null ? Html::hiddenInput('service_id', Yii::$app->request->get('service_id')) : '' ?>
-
                 <div class="input-group">
                     <input type="text" name="search" class="form-control" value="<?= Html::encode(Yii::$app->request->get('search')) ?>" placeholder="Search orders">
                     <span class="input-group-btn search-select-wrap">
-            <select class="form-control search-select" name="search-type">
-              <option value="1" <?= Yii::$app->request->get('search-type') == '1' ? 'selected' : '' ?>>Order ID</option>
-              <option value="2" <?= Yii::$app->request->get('search-type') == '2' ? 'selected' : '' ?>>Link</option>
-              <option value="3" <?= Yii::$app->request->get('search-type') == '3' ? 'selected' : '' ?>>Username</option>
-            </select>
-            <button type="submit" class="btn btn-default">
-                <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
-            </button>
-          </span>
+        <select class="form-control search-select" name="search-type">
+          <option value="1" <?= Yii::$app->request->get('search-type') == '1' ? 'selected' : '' ?>>Order ID</option>
+          <option value="2" <?= Yii::$app->request->get('search-type') == '2' ? 'selected' : '' ?>>Link</option>
+          <option value="3" <?= Yii::$app->request->get('search-type') == '3' ? 'selected' : '' ?>>Username</option>
+        </select>
+        <button type="submit" class="btn btn-default">
+          <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+        </button>
+      </span>
                 </div>
             </form>
         </li>
@@ -169,20 +189,27 @@ if (!empty($activeServiceIds)) {
             <!-- Выпадающий фильтр: Service -->
             <th class="dropdown-th">
                 <div class="dropdown">
-                    <button class="btn btn-th btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                    <button class="btn btn-th btn-default dropdown-toggle" type="button" data-toggle="dropdown">
                         Service <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu">
                         <li class="<?= $searchModel->service_id === null ? 'active' : '' ?>">
-                            <!-- Выводим количество активных сервисов в списке (по которым есть заказы) -->
-                            <a href="<?= $filterUrl('service_id', null) ?>">All (<?= count($activeServices) ?>)</a>
+                            <a href="<?= $filterUrl('service_id', null) ?>">All (<?= $dataProvider->totalCount ?>)</a>
                         </li>
-                        <?php foreach ($activeServices as $service): ?>
-                            <li class="<?= $searchModel->service_id == $service['id'] ? 'active' : '' ?>">
-                                <a href="<?= $filterUrl('service_id', $service['id']) ?>">
-                                    <span class="label-id"><?= $service['id'] ?></span> <?= Html::encode($service['name']) ?>
-                                </a>
-                            </li>
+                        <?php foreach ($dropdownServices as $item): ?>
+                            <?php if ($item['disabled']): ?>
+                                <li class="grey disabled" style="padding: 3px 20px; color: #c1c1c1; cursor: not-allowed;">
+                                    <span class="label-id" style="border-color: #eee;"><?= $item['id'] ?></span>
+                                    <?= Html::encode($item['name']) ?> (0)
+                                </li>
+                            <?php else: ?>
+                                <li class="<?= $searchModel->service_id == $item['id'] ? 'active' : '' ?>">
+                                    <a href="<?= $filterUrl('service_id', $item['id']) ?>">
+                                        <span class="label-id"><?= $item['id'] ?></span>
+                                        <?= Html::encode($item['name']) ?> (<?= $item['count'] ?>)
+                                    </a>
+                                </li>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </ul>
                 </div>
@@ -252,6 +279,14 @@ if (!empty($activeServiceIds)) {
             <?= $dataProvider->pagination->offset + count($dataProvider->getModels()) ?>
             of
             <?= $dataProvider->totalCount ?>
+
+            <!-- Ссылка на скачивание CSV согласно Middle-заданию -->
+            <div style="margin-top: 5px;">
+                <a href="<?= Url::to(array_merge($statusSlug === null ? ['/orders/order/export'] : ['/orders/order/export', 'statusSlug' => $statusSlug], Yii::$app->request->get())) ?>" class="text-primary">
+                    <span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save result
+                </a>
+            </div>
         </div>
+
     </div>
 </div>
