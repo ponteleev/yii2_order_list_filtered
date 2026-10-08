@@ -59,10 +59,15 @@ $config = [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
-                // Важно: Сначала пишем более специфичное правило со статусом
-                'orders/<statusSlug:(pending|in-progress|completed|canceled|error)>' => 'orders/order/index',
+                // Полное ЧПУ: /orders/pending/manual/service-6
+                'orders/<statusSlug:[a-z-]+>/<mode:\d+>/service-<service_id:\d+>' => 'orders/order/index',
+                // ЧПУ без режима: /orders/pending/service-6
+                'orders/<statusSlug:[a-z-]+>/service-<service_id:\d+>' => 'orders/order/index',
+                // ЧПУ без сервиса: /orders/pending/manual
+                'orders/<statusSlug:[a-z-]+>/<mode:\d+>' => 'orders/order/index',
 
-                // Правило для главной страницы модуля (Все заказы)
+                // Базовые правила
+                'orders/<statusSlug:[a-z-]+>' => 'orders/order/index',
                 'orders' => 'orders/order/index',
             ],
         ],

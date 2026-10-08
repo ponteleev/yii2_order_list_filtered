@@ -94,6 +94,11 @@ usort($dropdownServices, function(array $a, array $b): int {
     return $b['count'] <=> $a['count'];
 });
 
+$totalAllServicesCount = 0;
+foreach ($dropdownServices as $item) {
+    $totalAllServicesCount += $item['count'];
+}
+
 // Локализованные списки статусов и табов навигации
 $statusesMap = [
     0 => Yii::t('modules/orders', 'Pending'),
@@ -160,7 +165,7 @@ $tabItems = [
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
                         <li class="<?= $searchModel->service_id === null ? 'active' : '' ?>">
-                            <a href="<?= $filterUrl('service_id', null) ?>"><?= Yii::t('modules/orders', 'All') ?> (<?= $dataProvider->totalCount ?>)</a>
+                            <a href="<?= $filterUrl('service_id', null) ?>"><?= Yii::t('modules/orders', 'All') ?> (<?= $totalAllServicesCount ?>)</a>
                         </li>
                         <?php foreach ($dropdownServices as $item): ?>
                             <?php if ($item['disabled']): ?>
@@ -170,7 +175,7 @@ $tabItems = [
                                     <?= Html::encode($item['name']) ?> (0)
                                 </li>
                             <?php else: ?>
-                                <li class="(int)$searchModel->service_id === $item['id'] ? 'active' : '' ?>">
+                                <li class="<?= (int)$searchModel->service_id === $item['id'] ? 'active' : '' ?>">
                                     <a href="<?= $filterUrl('service_id', (string)$item['id']) ?>">
                                         <span class="label-id"><?= $item['id'] ?></span>
                                         <?= Html::encode($item['name']) ?> (<?= $item['count'] ?>)
