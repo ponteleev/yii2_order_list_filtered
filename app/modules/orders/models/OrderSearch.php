@@ -2,11 +2,12 @@
 
 namespace app\modules\orders\models;
 
+use app\models\contracts\OrderFilterInterface;
 use app\models\Order;
 use yii\data\ActiveDataProvider;
 use yii\db\Query;
 
-class OrderSearch extends Order
+class OrderSearch extends Order implements OrderFilterInterface
 {
     public ?string $search = null;       // Строка поиска
     public ?string $searchType = null;   // Тип поиска (1 - ID, 2 - Link, 3 - Username)
@@ -80,4 +81,65 @@ class OrderSearch extends Order
 
         return $dataProvider;
     }
+
+    /**
+     * Возвращает валидированный цифровой статус заказа для фильтрации.
+     *
+     * @return int|null
+     */
+    public function getStatus(): ?int
+    {
+        return $this->status !== null ? (int)$this->status : null;
+    }
+
+    /**
+     * Возвращает режим выполнения заказа (Manual/Auto).
+     *
+     * @return int|null
+     */
+    public function getMode(): ?int
+    {
+        return $this->mode !== null ? (int)$this->mode : null;
+    }
+
+    /**
+     * Возвращает идентификатор выбранной услуги.
+     *
+     * @return int|null
+     */
+    public function getServiceId(): ?int
+    {
+        return $this->service_id !== null ? (int)$this->service_id : null;
+    }
+
+    /**
+     * Возвращает очищенную текстовую строку поиска.
+     *
+     * @return string|null
+     */
+    public function getSearch(): ?string
+    {
+        return $this->search;
+    }
+
+    /**
+     * Возвращает выбранный тип поиска (ID, Link, Username).
+     *
+     * @return string|null
+     */
+    public function getSearchType(): ?string
+    {
+        return $this->searchType;
+    }
+
+    /**
+     * Возвращает предвыбранный массив ID пользователей (защита от N+1).
+     *
+     * @return array
+     */
+    public function getFoundUserIds(): array
+    {
+        return $this->foundUserIds;
+    }
+
 }

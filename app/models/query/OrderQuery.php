@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace app\models\query;
 
+use app\models\contracts\OrderFilterInterface;
 use app\models\Order;
 use app\modules\orders\models\OrderSearch;
 use yii\db\ActiveQuery;
@@ -20,16 +21,16 @@ class OrderQuery extends ActiveQuery
      * Накладывает условия фильтрации на базовый запрос на основе валидированной модели поиска.
      * Метод использует сильные составные индексы СУБД для обеспечения Highload-производительности.
      *
-     * @param OrderSearch $searchModel Экземпляр модели поиска с загруженными GET-параметрами
-     * @return $this Текущий объект запроса для поддержки цепочки методов (Method Chaining)
+     * @param OrderFilterInterface $searchModel Реализация интерфейса модели поиска
+     * @return self Текущий объект запроса для поддержки цепочки методов (Method Chaining)
      */
-    public function filterBySearchModel(OrderSearch $searchModel): self
+    public function filterBySearchModel(OrderFilterInterface $searchModel): self
     {
         // 1. Фильтрация по базовым составным индексам таблицы (status, mode, service_id)
         $this->andFilterWhere([
-            'orders.status' => $searchModel->status,
-            'orders.mode' => $searchModel->mode,
-            'orders.service_id' => $searchModel->service_id,
+            'orders.status' => $searchModel->getStatus(),
+            'orders.mode' => $searchModel->getMode(),
+            'orders.service_id' => $searchModel->getServiceId(),
         ]);
 
         // 2. Применяем текстовый поиск через приватный метод
@@ -42,27 +43,30 @@ class OrderQuery extends ActiveQuery
      * Собирает агрегированную статистику (количество заказов) по сервисам с учетом текущих фильтров листинга.
      * Метод исключает из условий фильтрации само поле service_id, чтобы корректно рассчитать каунтеры для других пунктов.
      *
-     * @param OrderSearch $searchModel Экземпляр модели поиска
+     * @param OrderFilterInterface $searchModel Реализация интерфейса модели поиска
      * @return array Сырой массив данных из СУБД в формате [['service_id' => X, 'count' => Y], ...]
      */
-    public function getServicesSummary(OrderSearch $searchModel): array
+    public function getServicesSummary(OrderFilterInterface $searchModel): array
     {
-        // Клонируем текущее состояние запроса, чтобы не нарушить основной поток выборки данных в DataProvider
+        // Клонируем текущее состояние запроса
         $clone = clone $this;
 
-        // Сбрасываем секцию WHERE у клона, чтобы пересобрать её без учета фильтра по service_id (требование ТЗ)
+        // Сбрасываем секции WHERE и JOIN, чтобы пересобрать легкий агрегирующий запрос.
+        // Это гарантирует, что MySQL посчитает каунтеры строго по плоской таблице orders
+        // и на 100% задействует составной индекс (Using index).
         $clone->where = null;
+        $clone->join = null;
 
         // Повторяем базовую фильтрацию, исключая service_id
         $clone->andFilterWhere([
-            'orders.status' => $searchModel->status,
-            'orders.mode' => $searchModel->mode,
+            'orders.status' => $searchModel->getStatus(),
+            'orders.mode' => $searchModel->getMode(),
         ]);
 
         // Применяем изолированный текстовый поиск к клонированному объекту запроса
         $clone->applySearchFilter($searchModel);
 
-        // Выполняем легкую агрегацию на стороне MySQL 8.
+        // Выполняем легкую агрегацию на стороне MySQL 8
         return $clone->select(['orders.service_id', 'COUNT(*) AS count'])
             ->groupBy(['orders.service_id'])
             ->asArray()
