@@ -3,8 +3,10 @@
 namespace ModuleOrders;
 
 use app\models\Order;
+use Yii;
 use yii\base\Application;
 use yii\base\BootstrapInterface;
+use yii\i18n\PhpMessageSource;
 
 /**
  * Класс модуля управления заказами.
@@ -20,11 +22,19 @@ class Module extends \yii\base\Module implements BootstrapInterface
     /**
      * {@inheritdoc}
      */
-    public function init()
+    public function init(): void
     {
         parent::init();
 
-        // custom initialization code goes here
+        Yii::$app->i18n->translations['modules/orders*'] = [
+            'class' => PhpMessageSource::class,
+            'sourceLanguage' => 'en-US',
+            'basePath' => '@ModuleOrders/messages',
+            'forceTranslation' => true,
+            'fileMap' => [
+                'modules/orders' => 'orders.php',
+            ],
+        ];
     }
 
     /**

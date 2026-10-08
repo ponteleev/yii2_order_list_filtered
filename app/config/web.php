@@ -17,7 +17,7 @@ $config = [
             ],
         ],
     ],
-    'language' => $_ENV['APP_LANGUAGE'] ?? 'en-US',
+    'language' => $_ENV['APP_LANGUAGE'] ?? 'en',
     // Автоматически открываем страницу заказов при входе на главную
     'defaultRoute' => 'orders/order/index',
     'aliases' => [
