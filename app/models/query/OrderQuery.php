@@ -6,7 +6,6 @@ namespace app\models\query;
 
 use app\models\contracts\OrderFilterInterface;
 use app\models\Order;
-use app\modules\orders\models\OrderSearch;
 use yii\db\ActiveQuery;
 use yii\db\Expression;
 
@@ -76,32 +75,32 @@ class OrderQuery extends ActiveQuery
     /**
      * Внутренний метод для изоляции дублирующейся логики текстового и идентификационного поиска.
      *
-     * @param OrderSearch $searchModel Экземпляр модели поиска
+     * @param OrderFilterInterface $searchModel Реализация интерфейса модели поиска
      * @return void
      */
-    private function applySearchFilter(OrderSearch $searchModel): void
+    private function applySearchFilter(OrderFilterInterface $searchModel): void
     {
-        if (empty($searchModel->search)) {
+        if (empty($searchModel->getSearch())) {
             return;
         }
 
-        switch ((string)$searchModel->searchType) {
+        switch ((string)$searchModel->getSearchType()) {
             case '1': // Поиск по точному совпадению Order ID
-                $this->andWhere(['orders.id' => $searchModel->search]);
+                $this->andWhere(['orders.id' => $searchModel->getSearch()]);
                 break;
 
             case '2': // Поиск по частичному совпадению ссылки (Link) через FULLTEXT
                 // Используем BOOLEAN MODE для поиска подстроки
                 $this->andWhere(new Expression(
                     'MATCH(orders.link) AGAINST(:search IN BOOLEAN MODE)',
-                    [':search' => '*' . $searchModel->search . '*']
+                    [':search' => '*' . $searchModel->getSearch() . '*']
                 ));
                 break;
 
             case '3': // Поиск по Username (first_name, last_name)
-                // Используем предвыбранный в модели OrderSearch массив числовых ID пользователей (защита от N+1)
-                if (!empty($searchModel->foundUserIds)) {
-                    $this->andWhere(['orders.user_id' => $searchModel->foundUserIds]);
+                // Используем предвыбранный методом интерфейса массив числовых ID пользователей (защита от N+1)
+                if (!empty($searchModel->getFoundUserIds())) {
+                    $this->andWhere(['orders.user_id' => $searchModel->getFoundUserIds()]);
                 } else {
                     // Если пользователи по текстовой маске не найдены, принудительно режем запрос
                     $this->andWhere(['orders.user_id' => 0]);
