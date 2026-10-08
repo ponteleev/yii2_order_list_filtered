@@ -83,7 +83,8 @@
     "autoload": {
         "psr-4": {
             "app\\": "",
-            "migrations\\": "/migrations"
+            "migrations\\": "/migrations",
+            "ModuleOrders\\": "modules/orders"
         }
     }
 

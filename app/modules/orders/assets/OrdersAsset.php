@@ -1,6 +1,6 @@
 <?php
 
-namespace app\modules\orders\assets;
+namespace ModuleOrders\assets;
 
 use yii\web\AssetBundle;
 

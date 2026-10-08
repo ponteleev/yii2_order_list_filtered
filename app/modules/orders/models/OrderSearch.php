@@ -1,6 +1,6 @@
 <?php
 
-namespace app\modules\orders\models;
+namespace ModuleOrders\models;
 
 use app\models\contracts\OrderFilterInterface;
 use app\models\Order;
@@ -13,12 +13,36 @@ class OrderSearch extends Order implements OrderFilterInterface
     public ?string $searchType = null;   // Тип поиска (1 - ID, 2 - Link, 3 - Username)
     public array $foundUserIds = []; // массив пользователей при поисках по ним для дедубликации запросов
 
+    /**
+     * Строгие правила валидации и фильтрации входящих параметров поисковой UI-формы.
+     * Защищают систему от XSS, переполнения RAM и несанкционированной подмены данных.
+     *
+     * @return array
+     */
     public function rules(): array
     {
         return [
-            [['id', 'user_id', 'quantity', 'service_id', 'status', 'mode', 'created_at'], 'integer'],
-            [['link', 'search', 'searchType'], 'safe'],
+            [['search', 'searchType'], 'trim'],
+            [['id', 'service_id'], 'integer', 'min' => 1],
+            ['mode', 'in', 'range' => [Order::MODE_MANUAL, Order::MODE_AUTO]],
+            ['status', 'in', 'range' => [
+                Order::STATUS_PENDING, Order::STATUS_IN_PROGRESS, Order::STATUS_COMPLETED, Order::STATUS_CANCELED, Order::STATUS_ERROR
+            ]],
+            ['search', 'string', 'max' => 100],
+            ['searchType', 'in', 'range' => [
+                Order::SEARCH_TYPE_ID, Order::SEARCH_TYPE_LINK, Order::SEARCH_TYPE_USERNAME
+            ]],
+            ['searchType', 'required', 'when' => [$this, 'validateSearchTypeRequired']],
         ];
+    }
+
+    /**
+     * Пользовательский метод проверки необходимости заполнения типа поиска.
+     * Избавляет от ошибки "Serialization of 'Closure' is not allowed".
+     */
+    public function validateSearchTypeRequired(self $model): bool
+    {
+        return $model->search !== null && $model->search !== '';
     }
 
     /**
@@ -42,12 +66,30 @@ class OrderSearch extends Order implements OrderFilterInterface
 
         // дедубликация перед вызовом OrderQuery->filterBySearchModel
         if (!empty($this->search) && $this->searchType == '3') {
-            $this->foundUserIds = (new Query())
+            // Очищаем лишние пробелы по краям
+            $trimmedSearch = trim($this->search);
+
+            // Разделяем строку по пробелу на Имя и Фамилию
+            $nameParts = explode(' ', $trimmedSearch, 2);
+
+            $userQuery = (new Query())
                 ->select(['id'])
-                ->from('{{%users}}')
-                ->where(['like', 'first_name', $this->search])
-                ->orWhere(['like', 'last_name', $this->search])
-                ->column();
+                ->from('{{%users}}');
+
+            if (count($nameParts) === 2) {
+                // Если введены два слова (например, "Vicente Ochoa"), делаем строгое совпадение по обоим полям
+                $userQuery->where([
+                    'first_name' => trim($nameParts[0]),
+                    'last_name'  => trim($nameParts[1]),
+                ]);
+            } else {
+                // Если введено только одно слово (например, только "Vicente" или только "Ochoa"),
+                // ищем строгое совпадение либо в имени, либо в фамилии
+                $userQuery->where(['first_name' => $trimmedSearch])
+                    ->orWhere(['last_name' => $trimmedSearch]);
+            }
+
+            $this->foundUserIds = $userQuery->column();
         }
 
         // 2. Инициализируем оптимизированные запросы (Count отдельно, Data отдельно)
@@ -58,6 +100,7 @@ class OrderSearch extends Order implements OrderFilterInterface
             'query' => $query,
             'pagination' => [
                 'pageSize' => 100,
+                'pageSizeParam' => false,
             ],
             'sort' => [
                 'defaultOrder' => [

@@ -27,6 +27,29 @@ use yii\db\ActiveRecord;
  */
 class Order extends ActiveRecord
 {
+    // --- КОНСТАНТЫ СТАТУСОВ (ID в базе данных) ---
+    public const STATUS_PENDING     = 0;
+    public const STATUS_IN_PROGRESS = 1;
+    public const STATUS_COMPLETED   = 2;
+    public const STATUS_CANCELED    = 3;
+    public const STATUS_ERROR       = 4;
+
+    // --- КОНСТАНТЫ ТЕКСТОВЫХ СЛАГОВ URL СТАТУСОВ ---
+    public const SLUG_PENDING     = 'pending';
+    public const SLUG_IN_PROGRESS = 'in-progress';
+    public const SLUG_COMPLETED   = 'completed';
+    public const SLUG_CANCELED    = 'canceled';
+    public const SLUG_ERROR       = 'error';
+
+    // --- КОНСТАНТЫ РЕЖИМОВ (Mode) ---
+    public const MODE_MANUAL = 0;
+    public const MODE_AUTO   = 1;
+
+    // --- КОНСТАНТЫ ТИПОВ ТЕКСТОВОГО ПОИСКА ---
+    public const SEARCH_TYPE_ID       = '1';
+    public const SEARCH_TYPE_LINK     = '2';
+    public const SEARCH_TYPE_USERNAME = '3';
+
     /**
      * Возвращает имя таблицы в базе данных.
      *
@@ -81,11 +104,22 @@ class Order extends ActiveRecord
     public static function getStatusSlugMap(): array
     {
         return [
-            'pending'     => 0,
-            'in-progress' => 1,
-            'completed'   => 2,
-            'canceled'    => 3,
-            'error'       => 4,
+            self::SLUG_PENDING     => self::STATUS_PENDING,
+            self::SLUG_IN_PROGRESS => self::STATUS_IN_PROGRESS,
+            self::SLUG_COMPLETED   => self::STATUS_COMPLETED,
+            self::SLUG_CANCELED    => self::STATUS_CANCELED,
+            self::SLUG_ERROR       => self::STATUS_ERROR,
+        ];
+    }
+
+    /**
+     * Обновленная карта режимов выполнения на основе констант
+     */
+    public static function getModeSlugMap(): array
+    {
+        return [
+            'manual' => self::MODE_MANUAL,
+            'auto'   => self::MODE_AUTO,
         ];
     }
 

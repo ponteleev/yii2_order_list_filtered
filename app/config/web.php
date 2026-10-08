@@ -6,7 +6,7 @@ $db = require __DIR__ . '/db.php';
 $config = [
     'id' => 'basic',
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log'],
+    'bootstrap' => ['log', 'orders'],
     'container' => [
         'singletons' => [
             \yii\mail\MailerInterface::class => [
@@ -17,7 +17,7 @@ $config = [
             ],
         ],
     ],
-    'language' => $_ENV['APP_LANGUAGE'] ?? 'en-US',
+    'language' => $_ENV['APP_LANGUAGE'] ?? 'en',
     // Автоматически открываем страницу заказов при входе на главную
     'defaultRoute' => 'orders/order/index',
     'aliases' => [
@@ -26,7 +26,7 @@ $config = [
     ],
     'modules' => [
         'orders' => [
-            'class' => 'app\modules\orders\Module',
+            'class' => 'ModuleOrders\Module',
         ],
     ],
     'components' => [
@@ -41,8 +41,8 @@ $config = [
             'enableAutoLogin' => true,
         ],
         'errorHandler' => [
-            // Перенаправляем обработку ошибок на наш модуль
-            'errorAction' => 'orders/order/index',
+            // Ссылаемся на зарегистрированный экшен error внутри модуля
+            'errorAction' => 'orders/order/error',
         ],
         'mailer' => \yii\mail\MailerInterface::class,
         'log' => [
@@ -59,16 +59,7 @@ $config = [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
-                // Полное ЧПУ: /orders/pending/manual/service-6
-                'orders/<statusSlug:[a-z-]+>/<mode:\d+>/service-<service_id:\d+>' => 'orders/order/index',
-                // ЧПУ без режима: /orders/pending/service-6
-                'orders/<statusSlug:[a-z-]+>/service-<service_id:\d+>' => 'orders/order/index',
-                // ЧПУ без сервиса: /orders/pending/manual
-                'orders/<statusSlug:[a-z-]+>/<mode:\d+>' => 'orders/order/index',
-
-                // Базовые правила
-                'orders/<statusSlug:[a-z-]+>' => 'orders/order/index',
-                'orders' => 'orders/order/index',
+                // все уже загружено автоматически
             ],
         ],
         'i18n' => [
