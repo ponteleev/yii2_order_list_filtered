@@ -1,16 +1,17 @@
 <?php
-/* @var $this \yii\web\View */
+/* @var $this View */
 /* @var $content string */
 
+use ModuleOrders\assets\OrdersAsset;
 use yii\helpers\Html;
-use app\modules\orders\assets\OrdersAsset;
 use yii\helpers\Url;
+use yii\web\View;
 
 /**
  * Главный шаблон (layout) модуля управления заказами.
  * Обеспечивает сквозную глобальную навигацию по ТЗ и мультиязычность.
  *
- * @var \yii\web\View $this
+ * @var View $this
  * @var string $content Содержимое дочернего представления (вьюхи index.php)
  */
 

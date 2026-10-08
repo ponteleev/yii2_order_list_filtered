@@ -26,7 +26,7 @@ $config = [
     ],
     'modules' => [
         'orders' => [
-            'class' => 'app\modules\orders\Module',
+            'class' => 'ModuleOrders\Module',
         ],
     ],
     'components' => [
@@ -41,8 +41,8 @@ $config = [
             'enableAutoLogin' => true,
         ],
         'errorHandler' => [
-            // Перенаправляем обработку ошибок на наш модуль
-            'errorAction' => 'orders/order/index',
+            // Ссылаемся на зарегистрированный экшен error внутри модуля
+            'errorAction' => 'orders/order/error',
         ],
         'mailer' => \yii\mail\MailerInterface::class,
         'log' => [

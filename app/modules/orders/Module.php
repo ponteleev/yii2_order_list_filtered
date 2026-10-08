@@ -1,6 +1,6 @@
 <?php
 
-namespace app\modules\orders;
+namespace ModuleOrders;
 
 use app\models\Order;
 use yii\base\Application;
@@ -15,7 +15,7 @@ class Module extends \yii\base\Module implements BootstrapInterface
     /**
      * {@inheritdoc}
      */
-    public $controllerNamespace = 'app\modules\orders\controllers';
+    public $controllerNamespace = 'ModuleOrders\controllers';
 
     /**
      * {@inheritdoc}
