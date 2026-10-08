@@ -42,12 +42,30 @@ class OrderSearch extends Order implements OrderFilterInterface
 
         // дедубликация перед вызовом OrderQuery->filterBySearchModel
         if (!empty($this->search) && $this->searchType == '3') {
-            $this->foundUserIds = (new Query())
+            // Очищаем лишние пробелы по краям
+            $trimmedSearch = trim($this->search);
+
+            // Разделяем строку по пробелу на Имя и Фамилию
+            $nameParts = explode(' ', $trimmedSearch, 2);
+
+            $userQuery = (new Query())
                 ->select(['id'])
-                ->from('{{%users}}')
-                ->where(['like', 'first_name', $this->search])
-                ->orWhere(['like', 'last_name', $this->search])
-                ->column();
+                ->from('{{%users}}');
+
+            if (count($nameParts) === 2) {
+                // Если введены два слова (например, "Vicente Ochoa"), делаем строгое совпадение по обоим полям
+                $userQuery->where([
+                    'first_name' => trim($nameParts[0]),
+                    'last_name'  => trim($nameParts[1]),
+                ]);
+            } else {
+                // Если введено только одно слово (например, только "Vicente" или только "Ochoa"),
+                // ищем строгое совпадение либо в имени, либо в фамилии
+                $userQuery->where(['first_name' => $trimmedSearch])
+                    ->orWhere(['last_name' => $trimmedSearch]);
+            }
+
+            $this->foundUserIds = $userQuery->column();
         }
 
         // 2. Инициализируем оптимизированные запросы (Count отдельно, Data отдельно)
@@ -58,6 +76,7 @@ class OrderSearch extends Order implements OrderFilterInterface
             'query' => $query,
             'pagination' => [
                 'pageSize' => 100,
+                'pageSizeParam' => false,
             ],
             'sort' => [
                 'defaultOrder' => [

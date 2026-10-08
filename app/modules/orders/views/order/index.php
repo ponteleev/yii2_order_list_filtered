@@ -20,7 +20,7 @@ use yii\widgets\LinkPager;
  * @var string|null $statusSlug Активный текстовый слаг статуса из ЧПУ-роутинга
  */
 
-$this->title = Yii::t('modules/orders', 'Orders');
+$this->title = Yii::t('modules/orders', 'orders.page.title');
 
 // Переворачиваем карту для URL-генерации (чтобы при необходимости находить слаг по ID)
 $idToSlugMap = array_flip(Order::getStatusSlugMap());
@@ -43,8 +43,13 @@ $filterUrl = function(string $paramName, ?string $value) use ($statusSlug): stri
 
     if ($paramName === 'statusSlug') {
         $activeSlug = $value;
-        // ТЗ: При переключении таба статуса, фильтры mode и service сбрасываются
-        unset($getParams['mode'], $getParams['service_id']);
+        // сбрасываем все параметры при смене вкладки статуса
+        unset(
+            $getParams['mode'],
+            $getParams['service_id'],
+            $getParams['search'],
+            $getParams['searchType'],
+        );
     } else {
         $activeSlug = $statusSlug;
         if ($value === null) {
@@ -109,12 +114,12 @@ $statusesMap = [
 ];
 
 $tabItems = [
-    null          => Yii::t('modules/orders', 'All orders'),
-    'pending'     => Yii::t('modules/orders', 'Pending'),
-    'in-progress' => Yii::t('modules/orders', 'In progress'),
-    'completed'   => Yii::t('modules/orders', 'Completed'),
-    'canceled'    => Yii::t('modules/orders', 'Canceled'),
-    'error'       => Yii::t('modules/orders', 'Error'),
+    null                   => Yii::t('modules/orders', 'orders.tabs.all'),
+    Order::SLUG_PENDING     => Yii::t('modules/orders', 'orders.status.pending'),
+    Order::SLUG_IN_PROGRESS => Yii::t('modules/orders', 'orders.status.in_progress'),
+    Order::SLUG_COMPLETED   => Yii::t('modules/orders', 'orders.status.completed'),
+    Order::SLUG_CANCELED    => Yii::t('modules/orders', 'orders.status.canceled'),
+    Order::SLUG_ERROR       => Yii::t('modules/orders', 'orders.status.error'),
 ];
 ?>
 
@@ -133,11 +138,11 @@ $tabItems = [
                 <div class="input-group">
                     <input type="text" name="search" class="form-control" value="<?= Html::encode((string)$searchModel->search) ?>" placeholder="<?= Yii::t('modules/orders', 'Search orders') ?>">
                     <span class="input-group-btn search-select-wrap">
-            <select class="form-control search-select" name="searchType">
-              <option value="1" <?= (string)$searchModel->searchType === '1' ? 'selected' : '' ?>><?= Yii::t('modules/orders', 'Order ID') ?></option>
-              <option value="2" <?= (string)$searchModel->searchType === '2' ? 'selected' : '' ?>><?= Yii::t('modules/orders', 'Link') ?></option>
-              <option value="3" <?= (string)$searchModel->searchType === '3' ? 'selected' : '' ?>><?= Yii::t('modules/orders', 'Username') ?></option>
-            </select>
+                    <select class="form-control search-select" name="searchType">
+                      <option value="<?= Order::SEARCH_TYPE_ID ?>"><?= Yii::t('modules/orders', 'orders.search.id') ?></option>
+                      <option value="<?= Order::SEARCH_TYPE_LINK ?>"><?= Yii::t('modules/orders', 'orders.search.link') ?></option>
+                      <option value="<?= Order::SEARCH_TYPE_USERNAME ?>"><?= Yii::t('modules/orders', 'orders.search.username') ?></option>
+                    </select>
             <button type="submit" class="btn btn-default">
                 <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
             </button>
@@ -198,13 +203,13 @@ $tabItems = [
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
                         <li class="<?= $searchModel->mode === null ? 'active' : '' ?>">
-                            <a href="<?= $filterUrl('mode', null) ?>"><?= Yii::t('modules/orders', 'All') ?></a>
+                            <a href="<?= $filterUrl('mode', null) ?>"><?= Yii::t('modules/orders', 'orders.filter.all') ?></a>
                         </li>
-                        <li class="<?= (string)$searchModel->mode === '0' ? 'active' : '' ?>">
-                            <a href="<?= $filterUrl('mode', '0') ?>"><?= Yii::t('modules/orders', 'Manual') ?></a>
+                        <li class="<?= (string)$searchModel->mode === (string)Order::MODE_MANUAL ? 'active' : '' ?>">
+                            <a href="<?= $filterUrl('mode', (string)Order::MODE_MANUAL) ?>"><?= Yii::t('modules/orders', 'orders.mode.manual') ?></a>
                         </li>
-                        <li class="<?= (string)$searchModel->mode === '1' ? 'active' : '' ?>">
-                            <a href="<?= $filterUrl('mode', '1') ?>"><?= Yii::t('modules/orders', 'Auto') ?></a>
+                        <li class="<?= (string)$searchModel->mode === (string)Order::MODE_AUTO ? 'active' : '' ?>">
+                            <a href="<?= $filterUrl('mode', (string)Order::MODE_AUTO) ?>"><?= Yii::t('modules/orders', 'orders.mode.auto') ?></a>
                         </li>
                     </ul>
                 </div>
@@ -225,7 +230,7 @@ $tabItems = [
                 <?= Html::encode($order->service ? $order->service->name : '') ?>
             </td>
             <td><?= Html::encode($statusesMap[(int)$order->status] ?? 'Unknown') ?></td>
-            <td><?= (int)$order->mode === 1 ? Yii::t('modules/orders', 'Auto') : Yii::t('modules/orders', 'Manual') ?></td>
+            <td><?= (int)$order->mode === Order::MODE_AUTO ? Yii::t('modules/orders', 'Auto') : Yii::t('modules/orders', 'Manual') ?></td>
             <td>
                 <span class="nowrap"><?= Yii::$app->formatter->asDate((int)$order->created_at, 'yyyy-MM-dd') ?></span>
                 <span class="nowrap"><?= Yii::$app->formatter->asTime((int)$order->created_at, 'HH:mm:ss') ?></span>
@@ -258,9 +263,9 @@ $tabItems = [
             <?php if ($dataProvider->totalCount > $dataProvider->pagination->pageSize): ?>
                 <!-- Если страниц много: выводим текстовый диапазон с локализацией предлогов -->
                 <?= $dataProvider->getKeys() ? ($dataProvider->pagination->offset + 1) : 0 ?>
-                <?= Yii::t('modules/orders', 'to') ?>
+                <?= Yii::t('modules/orders', 'orders.pagination.to') ?>
                 <?= $dataProvider->pagination->offset + count($dataProvider->getModels()) ?>
-                <?= Yii::t('modules/orders', 'of') ?>
+                <?= Yii::t('modules/orders', 'orders.pagination.of') ?>
                 <?= $dataProvider->totalCount ?>
             <?php else: ?>
                 <!-- ТЗ: Если количество записей помещается на 1 странице, выводим просто общее количество записей -->
@@ -270,7 +275,7 @@ $tabItems = [
             <!-- Ссылка на потоковое скачивание CSV-отчета -->
             <div style="margin-top: 5px;">
                 <a href="<?= Url::to(array_merge($statusSlug === null ? ['/orders/order/export'] : ['/orders/order/export', 'statusSlug' => $statusSlug], Yii::$app->request->get())) ?>" class="text-primary">
-                    <span class="glyphicon glyphicon-save" aria-hidden="true"></span> <?= Yii::t('modules/orders', 'Save result') ?>
+                    <span class="glyphicon glyphicon-save" aria-hidden="true"></span> <?= Yii::t('modules/orders', 'orders.export.save') ?>
                 </a>
             </div>
         </div>

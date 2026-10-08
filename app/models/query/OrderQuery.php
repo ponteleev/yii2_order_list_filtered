@@ -85,19 +85,21 @@ class OrderQuery extends ActiveQuery
         }
 
         switch ((string)$searchModel->getSearchType()) {
-            case '1': // Поиск по точному совпадению Order ID
+            case Order::SEARCH_TYPE_ID: // Поиск по точному совпадению Order ID
                 $this->andWhere(['orders.id' => $searchModel->getSearch()]);
                 break;
 
-            case '2': // Поиск по частичному совпадению ссылки (Link) через FULLTEXT
-                // Используем BOOLEAN MODE для поиска подстроки
+            case Order::SEARCH_TYPE_LINK: // Поиск по частичному совпадению ссылки (Link) строго по префиксу
+                // Третий параметр `false` указывает Yii2 не ставить процент в начале.
+                // В итоге сгенерируется чистый SQL: WHERE orders.link LIKE 'значение%'
+                //todo Обсудить с Андреем префиксный поиск, предложенный на ревью
                 $this->andWhere(new Expression(
-                    'MATCH(orders.link) AGAINST(:search IN BOOLEAN MODE)',
-                    [':search' => '*' . $searchModel->getSearch() . '*']
+                    'orders.link LIKE :link',
+                    [':link' => '%' . $searchModel->getSearch() . '%']
                 ));
                 break;
 
-            case '3': // Поиск по Username (first_name, last_name)
+            case Order::SEARCH_TYPE_USERNAME: // Поиск по Username (first_name, last_name)
                 // Используем предвыбранный методом интерфейса массив числовых ID пользователей (защита от N+1)
                 if (!empty($searchModel->getFoundUserIds())) {
                     $this->andWhere(['orders.user_id' => $searchModel->getFoundUserIds()]);
