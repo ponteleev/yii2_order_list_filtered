@@ -21,32 +21,6 @@ use yii\web\View;
 
 $this->title = Yii::t('modules/orders', 'orders.page.title');
 
-// Универсальный генератор ЧПУ-ссылок для фильтров табов и выпадающих списков
-$filterUrl = function(string $paramName, ?string $value) use ($statusSlug): string {
-    $getParams = Yii::$app->request->get();
-    $route = ['/orders/order/index'];
-
-    if ($paramName === 'statusSlug') {
-        $activeSlug = $value;
-        // При смене таба полностью сбрасываем фильтры, поиск и пагинацию по требованию ревью
-        unset($getParams['mode'], $getParams['service_id'], $getParams['search'], $getParams['searchType'], $getParams['page']);
-    } else {
-        $activeSlug = $statusSlug;
-        unset($getParams['page']); // Сбрасываем страницу при смене мелких фильтров
-        if ($value === null) {
-            unset($getParams[$paramName]);
-        } else {
-            $getParams[$paramName] = $value;
-        }
-    }
-
-    if ($activeSlug !== null && $activeSlug !== '') {
-        $route['statusSlug'] = $activeSlug;
-    }
-
-    return Url::to(array_merge($route, $getParams));
-};
-
 // --- ВЫЧИСЛЕНИЕ ДИНАМИЧЕСКИХ КАУНТЕРОВ СЕРВИСОВ С УЧЕТОМ ТЗ ---
 $queryInstance = Order::find();
 $queryInstance->filterBySearchModel($searchModel);
@@ -83,7 +57,6 @@ usort($dropdownServices, function(array $a, array $b): int {
     <?= $this->render('_tabs_and_search', [
         'searchModel' => $searchModel,
         'statusSlug'  => $statusSlug,
-        'filterUrl'   => $filterUrl,
     ]) ?>
     <!-- Выводим блок ошибок валидации формы на экран (Bootstrap 3 alert) -->
     <?php if ($searchModel->hasErrors()): ?>
@@ -99,7 +72,7 @@ usort($dropdownServices, function(array $a, array $b): int {
             'searchModel'           => $searchModel,
             'dropdownServices'      => $dropdownServices,
             'totalAllServicesCount' => $totalAllServicesCount,
-            'filterUrl'             => $filterUrl,
+            'statusSlug'  => $statusSlug,
         ]) ?>
         </thead>
         <tbody>
