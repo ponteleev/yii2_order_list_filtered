@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 use ModuleOrders\models\OrderSearch;
 use yii\helpers\Html;
-use yii\helpers\Url;
-use app\models\Order;
-use app\models\Service;
 use yii\data\ActiveDataProvider;
 use yii\web\View;
 
@@ -17,39 +14,12 @@ use yii\web\View;
  * @var OrderSearch $searchModel Модель поиска и HTTP-валидации
  * @var ActiveDataProvider $dataProvider Провайдер данных с пагинацией
  * @var string|null $statusSlug Активный текстовый слаг статуса из ЧПУ
+ * @var array $dropdownServices
+ * @var int $totalAllServicesCount
  */
 
 $this->title = Yii::t('modules/orders', 'orders.page.title');
 
-// --- ВЫЧИСЛЕНИЕ ДИНАМИЧЕСКИХ КАУНТЕРОВ СЕРВИСОВ С УЧЕТОМ ТЗ ---
-$queryInstance = Order::find();
-$queryInstance->filterBySearchModel($searchModel);
-$stats = $queryInstance->getServicesSummary($searchModel);
-
-$serviceCounts = [];
-foreach ($stats as $row) {
-    $serviceCounts[(int)$row['service_id']] = (int)$row['count'];
-}
-
-$servicesData = Service::find()->asArray()->all();
-$dropdownServices = [];
-$totalAllServicesCount = 0; // Для исправления ошибки каунтера пункта All
-
-foreach ($servicesData as $s) {
-    $count = $serviceCounts[(int)$s['id']] ?? 0;
-    $totalAllServicesCount += $count;
-    $dropdownServices[] = [
-        'id'       => (int)$s['id'],
-        'name'     => (string)$s['name'],
-        'count'    => $count,
-        'disabled' => ($count === 0)
-    ];
-}
-
-// Сортировка по ТЗ: от большего количества заказов к меньшему
-usort($dropdownServices, function(array $a, array $b): int {
-    return $b['count'] <=> $a['count'];
-});
 ?>
 
 <div class="container-fluid">

@@ -4,26 +4,31 @@ declare(strict_types=1);
 
 namespace ModuleOrders\actions;
 
-use ModuleOrders\models\OrderSearch;
 use Yii;
 use yii\base\Action;
 use yii\web\NotFoundHttpException;
 use app\models\Order;
+use ModuleOrders\models\OrderSearch;
 
 /**
  * Экшен обработки главной страницы листинга и фильтрации заказов.
+ * Избавлен от бизнес-логики и вычислительных алгоритмов (Thin Controller).
  */
 class IndexAction extends Action
 {
     /**
-     * Выполняет рендеринг страницы.
-     * @throws NotFoundHttpException
+     * Выполняет обработку HTTP-запроса и рендеринг страницы.
+     *
+     * @param string|null $statusSlug Активный текстовый слаг статуса из ЧПУ-маршрута
+     * @return string HTML-контент страницы
+     * @throws NotFoundHttpException Если передан несуществующий слаг статуса
      */
     public function run(?string $statusSlug = null): string
     {
         $searchModel = new OrderSearch();
         $queryParams = Yii::$app->request->queryParams;
 
+        // 1. Обработка ЧПУ-роутинга по слагам статусов в соответствии с ТЗ
         if ($statusSlug !== null && $statusSlug !== '') {
             $slugMap = Order::getStatusSlugMap();
 
@@ -36,13 +41,19 @@ class IndexAction extends Action
             $statusSlug = null;
         }
 
+        // 2. Инициализируем ActiveDataProvider для таблицы
         $dataProvider = $searchModel->search($queryParams);
 
-        // Обращаемся к контроллеру для вызова метода рендера шаблона
+        // 3. Извлекаем полностью подготовленные UI-данные каунтеров сервисов из модели
+        $servicesData = $searchModel->getDropdownServicesData();
+
+        // 4. Передаем чистые данные в шаблон представления диспетчера
         return $this->controller->render('index', [
-            'searchModel'  => $searchModel,
-            'dataProvider' => $dataProvider,
-            'statusSlug'   => $statusSlug,
+            'searchModel'           => $searchModel,
+            'dataProvider'          => $dataProvider,
+            'statusSlug'            => $statusSlug,
+            'dropdownServices'      => $servicesData['dropdownServices'],
+            'totalAllServicesCount' => $servicesData['totalAllServicesCount'],
         ]);
     }
 }

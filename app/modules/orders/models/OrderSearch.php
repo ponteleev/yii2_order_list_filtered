@@ -4,6 +4,7 @@ namespace ModuleOrders\models;
 
 use app\models\contracts\OrderFilterInterface;
 use app\models\Order;
+use app\models\Service;
 use yii\data\ActiveDataProvider;
 use yii\db\Query;
 
@@ -183,6 +184,86 @@ class OrderSearch extends Order implements OrderFilterInterface
     public function getFoundUserIds(): array
     {
         return $this->foundUserIds;
+    }
+
+    /**
+     * Возвращает полностью подготовленные данные для выпадающего списка сервисов.
+     * Очищает экшены и представления от вычислительной логики.
+     *
+     * @return array Массив формата ['dropdownServices' => array, 'totalCount' => int]
+     */
+    public function getDropdownServicesData(): array
+    {
+        // Шаг 1. Получаем карту каунтеров из базы данных orders
+        $serviceCounts = $this->fetchServiceCounts();
+
+        // Шаг 2. Мержим каунтеры со статическим справочником из таблицы services
+        $dropdownData = $this->buildDropdownItems($serviceCounts);
+
+        // Шаг 3. Сортируем сервисы по ТЗ (от большего к меньшему)
+        $dropdownServices = $this->sortDropdownItems($dropdownData['items']);
+
+        return [
+            'dropdownServices'      => $dropdownServices,
+            'totalAllServicesCount' => $dropdownData['total'],
+        ];
+    }
+
+    /**
+     * Блок 1. Извлекает сырые агрегированные каунтеры заказов из СУБД.
+     * Использует клон запроса и оптимизированные составные индексы.
+     */
+    private function fetchServiceCounts(): array
+    {
+        $queryInstance = Order::find();
+        $queryInstance->filterBySearchModel($this);
+        $stats = $queryInstance->getServicesSummary($this);
+
+        $serviceCounts = [];
+        foreach ($stats as $row) {
+            $serviceCounts[(int)$row['service_id']] = (int)$row['count'];
+        }
+
+        return $serviceCounts;
+    }
+
+    /**
+     * Блок 2. Формирует структуру для дропдауна на основе справочника Service.
+     */
+    private function buildDropdownItems(array $serviceCounts): array
+    {
+        $servicesData = Service::find()->asArray()->all();
+        $items = [];
+        $total = 0;
+
+        foreach ($servicesData as $s) {
+            $count = $serviceCounts[(int)$s['id']] ?? 0;
+            $total += $count;
+
+            $items[] = [
+                'id'       => (int)$s['id'],
+                'name'     => (string)$s['name'],
+                'count'    => $count,
+                'disabled' => ($count === 0),
+            ];
+        }
+
+        return [
+            'items' => $items,
+            'total' => $total,
+        ];
+    }
+
+    /**
+     * Блок 3. Выполняет лексикографическую сортировку элементов по убыванию каунтеров.
+     */
+    private function sortDropdownItems(array $items): array
+    {
+        usort($items, static function (array $a, array $b): int {
+            return $b['count'] <=> $a['count'];
+        });
+
+        return $items;
     }
 
 }
