@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use ModuleOrders\helpers\OrderUrlHelper;
 use ModuleOrders\models\OrderSearch;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -9,8 +10,7 @@ use app\models\Order;
 
 /**
  * @var OrderSearch $searchModel
- * @var string|null $statusSlug
- * @var closure $filterUrl
+ * @var string|null $statusSlug Активный текстовый слаг статуса из ЧПУ
  */
 
 $tabItems = [
@@ -26,7 +26,7 @@ $tabItems = [
 <ul class="nav nav-tabs p-b">
     <?php foreach ($tabItems as $slug => $label): ?>
         <li class="<?= $statusSlug === $slug ? 'active' : '' ?>">
-            <a href="<?= $filterUrl('statusSlug', $slug) ?>"><?= Html::encode($label) ?></a>
+            <a href="<?= OrderUrlHelper::createFilterUrl('statusSlug', $slug, $statusSlug) ?>"><?= Html::encode($label) ?></a>
         </li>
     <?php endforeach; ?>
 

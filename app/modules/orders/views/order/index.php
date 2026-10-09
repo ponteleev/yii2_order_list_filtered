@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 use ModuleOrders\models\OrderSearch;
 use yii\helpers\Html;
-use yii\helpers\Url;
-use app\models\Order;
-use app\models\Service;
 use yii\data\ActiveDataProvider;
 use yii\web\View;
 
@@ -17,65 +14,12 @@ use yii\web\View;
  * @var OrderSearch $searchModel Модель поиска и HTTP-валидации
  * @var ActiveDataProvider $dataProvider Провайдер данных с пагинацией
  * @var string|null $statusSlug Активный текстовый слаг статуса из ЧПУ
+ * @var array $dropdownServices
+ * @var int $totalAllServicesCount
  */
 
 $this->title = Yii::t('modules/orders', 'orders.page.title');
 
-// Универсальный генератор ЧПУ-ссылок для фильтров табов и выпадающих списков
-$filterUrl = function(string $paramName, ?string $value) use ($statusSlug): string {
-    $getParams = Yii::$app->request->get();
-    $route = ['/orders/order/index'];
-
-    if ($paramName === 'statusSlug') {
-        $activeSlug = $value;
-        // При смене таба полностью сбрасываем фильтры, поиск и пагинацию по требованию ревью
-        unset($getParams['mode'], $getParams['service_id'], $getParams['search'], $getParams['searchType'], $getParams['page']);
-    } else {
-        $activeSlug = $statusSlug;
-        unset($getParams['page']); // Сбрасываем страницу при смене мелких фильтров
-        if ($value === null) {
-            unset($getParams[$paramName]);
-        } else {
-            $getParams[$paramName] = $value;
-        }
-    }
-
-    if ($activeSlug !== null && $activeSlug !== '') {
-        $route['statusSlug'] = $activeSlug;
-    }
-
-    return Url::to(array_merge($route, $getParams));
-};
-
-// --- ВЫЧИСЛЕНИЕ ДИНАМИЧЕСКИХ КАУНТЕРОВ СЕРВИСОВ С УЧЕТОМ ТЗ ---
-$queryInstance = Order::find();
-$queryInstance->filterBySearchModel($searchModel);
-$stats = $queryInstance->getServicesSummary($searchModel);
-
-$serviceCounts = [];
-foreach ($stats as $row) {
-    $serviceCounts[(int)$row['service_id']] = (int)$row['count'];
-}
-
-$servicesData = Service::find()->asArray()->all();
-$dropdownServices = [];
-$totalAllServicesCount = 0; // Для исправления ошибки каунтера пункта All
-
-foreach ($servicesData as $s) {
-    $count = $serviceCounts[(int)$s['id']] ?? 0;
-    $totalAllServicesCount += $count;
-    $dropdownServices[] = [
-        'id'       => (int)$s['id'],
-        'name'     => (string)$s['name'],
-        'count'    => $count,
-        'disabled' => ($count === 0)
-    ];
-}
-
-// Сортировка по ТЗ: от большего количества заказов к меньшему
-usort($dropdownServices, function(array $a, array $b): int {
-    return $b['count'] <=> $a['count'];
-});
 ?>
 
 <div class="container-fluid">
@@ -83,7 +27,6 @@ usort($dropdownServices, function(array $a, array $b): int {
     <?= $this->render('_tabs_and_search', [
         'searchModel' => $searchModel,
         'statusSlug'  => $statusSlug,
-        'filterUrl'   => $filterUrl,
     ]) ?>
     <!-- Выводим блок ошибок валидации формы на экран (Bootstrap 3 alert) -->
     <?php if ($searchModel->hasErrors()): ?>
@@ -99,7 +42,7 @@ usort($dropdownServices, function(array $a, array $b): int {
             'searchModel'           => $searchModel,
             'dropdownServices'      => $dropdownServices,
             'totalAllServicesCount' => $totalAllServicesCount,
-            'filterUrl'             => $filterUrl,
+            'statusSlug'  => $statusSlug,
         ]) ?>
         </thead>
         <tbody>
