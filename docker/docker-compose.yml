@@ -1,3 +1,5 @@
+name: yii2-order-filtered-app  # Изолирует проект на уровне Docker
+
 services:
   # 1. Сервер баз данных MySQL 8
   db:
